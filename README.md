@@ -5,14 +5,14 @@
 ```
 npm install
 touch token
-touch app.lua
 ```
 
 Paste your FarmBot device token into the `token` file.
-Paste your Lua code into `app.lua`.
 
 ## Run
 
+To run an example script such as `examples/water_all.lua`, run:
+
 ```
-node main.mjs
+node main.mjs examples/water_all.lua
 ```

@@ -11,4 +11,6 @@ function readFile(path) {
 const token = readFile("./token");
 const fb = new Farmbot({ token });
 await fb.connect();
-fb.lua(readFile("app.lua"));
+fb
+  .lua(readFile(process.argv[2]))
+  .then(() => process.exit(0), () => process.exit(1));
