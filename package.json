@@ -1,0 +1,25 @@
+{
+  "name": "public-sequence-staging",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FarmBot-Labs/public-sequence-staging.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/FarmBot-Labs/public-sequence-staging/issues"
+  },
+  "homepage": "https://github.com/FarmBot-Labs/public-sequence-staging#readme",
+  "dependencies": {
+    "atob": "^2.1.2",
+    "farmbot": "^14.4.0",
+    "typescript": "^4.4.4"
+  }
+}
