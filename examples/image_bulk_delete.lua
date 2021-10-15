@@ -1,26 +1,49 @@
--- IMPORTANT: Change these values if you are self hosted:
-protocol = "https"
-host = "my.farm.bot"
+local url = "https://my.farm.bot/api/images/"
+function get_images()
+    response, err = http({
+        method = "GET",
+        url = url,
+        headers = {
+            Authorization = ("bearer " .. auth_token()),
+            Accept = "application/json"
+        }
+    })
 
--- BEGIN --
+    function no(msg) send_message("error", msg, "toast") end
 
-url = protocol .. "://" .. host .. "/api/images/"
-headers = {
-    Authorization = ("bearer " .. auth_token()),
-    Accept = "application/json"
-}
-response, error = http({url = url, method = "GET", headers = headers})
-
-if error then
-    send_message("error", "ERROR: " .. inspect(error), "toast")
-    return
+    if err then return no("Network Error: " .. inspect(err)) end
+    if response.status > 299 then
+        return no("HTTP Error: " .. response.status)
+    end
+    return json.decode(response.body)
 end
 
-images = json.decode(response.body)
+images = get_images()
+count = 0
+repeat
+    count = count + 1
 
-for k in pairs(images) do
-    image = images[k]
-    send_message("info", "Delete image #" .. image.id, "toast")
-    wait(500)
-    http({url = url .. image.id, method = "DELETE", headers = headers})
-end
+    local message = "Begining image deletion batch " .. count
+    send_message("info", message, "toast")
+
+    for k in pairs(images) do
+        if read_status("informational_settings", "locked") then
+            return
+        else
+            if (k % 45) == 0 then
+                m =
+                    "Deleted " .. k .. " of " .. #images .. " images in batch " ..
+                        count
+                send_message("info", m, "toast")
+            end
+            wait(500)
+            collectgarbage()
+            http({
+                url = url .. images[k].id,
+                method = "DELETE",
+                headers = headers
+            })
+        end
+    end
+    wait(2000)
+until (#images == 0)
