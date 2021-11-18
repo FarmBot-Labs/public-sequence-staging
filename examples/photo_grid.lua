@@ -4,8 +4,8 @@ steps_per_mm_x = read_status("mcu_params", "movement_step_per_mm_x")
 nr_steps_x = read_status("mcu_params", "movement_axis_nr_steps_x")
 
 -- 10% margin of error: Taking too many photos is better than taking too few.
-x_spacing = tonumber(env("CAMERA_CALIBRATION_center_pixel_location_y")) * 0.90
-y_spacing = tonumber(env("CAMERA_CALIBRATION_center_pixel_location_x")) * 0.90
+x_spacing = tonumber(env("CAMERA_CALIBRATION_center_pixel_location_y"))
+y_spacing = tonumber(env("CAMERA_CALIBRATION_center_pixel_location_x"))
 z = tonumber(env("CAMERA_CALIBRATION_camera_z"))
 y_length = nr_steps_y / steps_per_mm_y
 x_length = nr_steps_x / steps_per_mm_x
