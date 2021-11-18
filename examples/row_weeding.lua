@@ -25,7 +25,7 @@ function swipe_x(length)
     end
 end
 
-for yy = 600, 1200, 10 do
+for yy = 100, 600, 10 do
     move_absolute(100, yy, -200)
-    swipe_x(800)
+    swipe_x(600)
 end

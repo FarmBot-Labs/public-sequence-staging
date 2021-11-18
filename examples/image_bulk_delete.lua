@@ -45,5 +45,5 @@ repeat
             })
         end
     end
-    wait(2000)
-until (#images == 0)
+    wait(500)
+until (count >= #images)
