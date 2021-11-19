@@ -1,46 +1,86 @@
-steps_per_mm_y = read_status("mcu_params", "movement_step_per_mm_y")
-nr_steps_y = read_status("mcu_params", "movement_axis_nr_steps_y")
-steps_per_mm_x = read_status("mcu_params", "movement_step_per_mm_x")
-nr_steps_x = read_status("mcu_params", "movement_axis_nr_steps_x")
+function round(n) return math.floor(n + 0.5) end
 
--- 10% margin of error: Taking too many photos is better than taking too few.
-x_spacing = tonumber(env("CAMERA_CALIBRATION_center_pixel_location_y"))
-y_spacing = tonumber(env("CAMERA_CALIBRATION_center_pixel_location_x"))
-z = tonumber(env("CAMERA_CALIBRATION_camera_z"))
-y_length = nr_steps_y / steps_per_mm_y
-x_length = nr_steps_x / steps_per_mm_x
-
-y_max = math.ceil(y_length / y_spacing)
-x_max = math.ceil(x_length / x_spacing)
-
-progress_key = "PHOTOGRID_PROGRESS"
-
-function reset_progress() return env(progress_key, "0") end
-
-function get_progress()
-    last_progress = env(progress_key) or reset_progress()
-    return tonumber(last_progress)
+function angleRound(angle)
+  local remainder = math.abs(angle % 90)
+  if remainder > 45 then
+    return 90 - remainder
+  else
+    return remainder
+  end
 end
 
-function set_progress(num) return env(progress_key, "" .. num) end
+-- Returns an integer that we need to subtract from width/height
+-- due to camera rotation issues.
+function cropAmount(width, height, angle)
+  local absAngle = angleRound(angle or 0)
+  if (absAngle > 0) then
+    local x = (5.61 - 0.095 * math.pow(absAngle, 2) + 9.06 * absAngle)
+    local factor = x / 640
+    local longEdge = math.max(width, height)
+    local result = round(longEdge * factor)
+    return result
+  end
+  return 0
+end
 
-count = 1
+function fwe(key)
+  local e = env("CAMERA_CALIBRATION_" .. key)
+  if e then
+    return tonumber(e)
+  else
+    send_message("error", "You must first run camera calibration", "toast")
+    os.exit()
+  end
+end
 
-for x = 0, x_max do
-    for y = 0, y_max do
-        if read_status("informational_settings", "locked") then
-            return
-        else
-            if count >= get_progress() then
-                move_absolute({y = y * y_spacing, x = x * x_spacing, z = z})
-                write_pin(7, "digital", 1)
-                take_photo()
-                set_progress(count)
-                write_pin(7, "digital", 0)
-            end
-            count = count + 1
-        end
+local cam_rotation = fwe("total_rotation_angle")
+local scale = fwe("coord_scale")
+local z = fwe("camera_z")
+local raw_img_size_x_px = fwe("center_pixel_location_x") * 2
+local raw_img_size_y_px = fwe("center_pixel_location_y") * 2
+local raw_img_size_x_mm = raw_img_size_x_px * scale
+local raw_img_size_y_mm = raw_img_size_y_px * scale
+local margin_mm = cropAmount(raw_img_size_x_px, raw_img_size_y_px, cam_rotation)
+local cropped_img_size_x_mm = raw_img_size_x_mm - margin_mm
+local cropped_img_size_y_mm = raw_img_size_y_mm - margin_mm
+if math.abs(cam_rotation) < 45 then
+  x_spacing_mm = cropped_img_size_x_mm
+  y_spacing_mm = cropped_img_size_y_mm
+else
+  x_spacing_mm = cropped_img_size_y_mm
+  y_spacing_mm = cropped_img_size_x_mm
+end
+local grid_size_x_mm = garden_size().x - x_spacing_mm
+local grid_size_y_mm = garden_size().y - y_spacing_mm
+local grid_points_x = math.ceil(grid_size_x_mm / x_spacing_mm)
+local grid_points_y = math.ceil(grid_size_y_mm / y_spacing_mm)
+local grid_points_total = (grid_points_x + 1) * (grid_points_y + 1)
+local grid_start_x_mm = (x_spacing_mm / 2)
+local grid_start_y_mm = (y_spacing_mm / 2)
+local x_offset_mm = fwe("camera_offset_x")
+local y_offset_mm = fwe("camera_offset_y")
+local current = 0
+for grid_index_x = 0, grid_points_x do
+  for grid_index_y = 0, grid_points_y do
+    current = current + 1
+    if read_status("informational_settings", "locked") then
+      return
+    else
+      local y_temp1 = (y_spacing_mm * grid_index_y)
+      if (grid_index_x % 2) == 0 then
+        y = (grid_start_y_mm + (y_temp1 - y_offset_mm))
+      else
+        y = (grid_size_y_mm - (y_temp1 - y_offset_mm))
+      end
+      move_absolute({
+        x = (grid_start_x_mm + (x_spacing_mm * grid_index_x) -
+          x_offset_mm),
+        y = y,
+        z = z
+      })
+      msg = "Taking photo " .. current .. " of " .. grid_points_total
+      send_message("info", msg)
+      take_photo()
     end
+  end
 end
-
-reset_progress()
