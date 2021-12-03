@@ -1,0 +1,6 @@
+local radians = math.rad(variable("Angle") % 361)
+local distance = variable("Distance")
+local pos = get_position()
+local x = pos.x + (distance * math.cos(radians))
+local y = pos.y + (distance * math.sin(radians))
+move_absolute(x, y, pos.z, 50)
